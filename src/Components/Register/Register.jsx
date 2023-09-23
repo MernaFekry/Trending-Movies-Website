@@ -1,6 +1,8 @@
 import React,{useState,useEffect} from 'react';
 import axios from 'axios';
-import Joi from 'Joi';
+import Joi from 'joi';
+import {useNavigate} from 'react-router-dom';
+import './Register.css';
 
 const Register = () => {
     const [action, setAction] = useState("Sign Up");
@@ -10,23 +12,57 @@ const Register = () => {
         email:'',
         password:''
     });
-    const [state, setstate] = useState(initialState);
+    const [apiMessage, setApiMessage] = useState("");
 
+    const navigate = useNavigate();
 
-    function handleSubmit(e){
+    function submitUser(e){
+        // Default form submit => page refresh
         e.preventDefault();
+        
+        // 1.Validation
+        const schema = Joi.object({
+            first_name:Joi.string().alphanum().min(3).required(),
+            email:Joi.string().email({minDomainSegments:2,tlds:{allow:['com','net']}}).required(),
+            password:Joi.string().pattern(/^[a-z]{6,10}$/i ).required()
+        })
 
-        if(joiErrors == null){
-            // add user
-            //post request
+        let joiResponse = schema.validate(userData , {abortEarly:false});
+
+
+        if(joiResponse.error == undefined)
+        {
+            // data valid
+            // call api
+            SendUser();
+        }
+        else {
+            let errorList = joiResponse.error.details;
+            setJoiErrors(errorList);
+            // console.log(joiErrors);
+        }
+        // SendUser();
+    }
+    
+
+    async function SendUser(){
+        const response = await axios.post("http://localhost:3030/users",userData);
+        console.log(response);
+
+        if(response.status == 201){
+            // Redirect to home page
             
+            console.log("Home");
+            navigate('/login');
         }
         else{
-            console.log("Not Added");
+            // user already registered
+            console.log(response);
+            setApiMessage( response.message );
         }
-
-
     }
+
+    
     
     function getUser(e){
         let inputValue = e.target.value;
@@ -36,23 +72,10 @@ const Register = () => {
 
         temp[inputId] = inputValue;
         setUserData(temp);
-        console.log(userData);
         
-        const schema = Joi.object({
-            first_name:Joi.string().alphanum().min(3).required(),
-            email:Joi.string().email({minDomainSegments:2,tlds:{allow:['com','net']}}).required(),
-            password:Joi.string().pattern(/^[a-z]{6,10}$/i ).required()
-        })
-        console.log(temp);
 
-        let joiResponse = schema.validate(temp , {abortEarly:false});
-        if(joiResponse.error == undefined)
-        {
-            handleSubmit();
-        }
-            
-        let errorList = joiResponse.error.details;
-        setJoiErrors(errorList);
+        
+        
     }
 
 
@@ -60,38 +83,42 @@ const Register = () => {
 
     return <>
 
-        <div className="container p-5 bg-dark">
-            <div className="row">
+        <div className="container p-5 bg-dark vh-100">
+            <div className="row mb-4">
                 <div className="col-12">
-                    <div>
-                        <h2>{action}</h2>
+                    <div className='header'>
+                        <h2 className='text-white text-center'>{action}</h2>
                     </div>
                 </div>
             </div>
 
             <div className="row">
-            
-                <form action={handleSubmit}>
+
+                { joiErrors == null ? "" : joiErrors.map( (err) =>  <div className='alert alert-warning'>{err.message}</div> ) }
+
+                {/* {apiMessage.length == 0 ? "" : <div className='alert alert-danger'>{apiMessage}</div>} */}
+
+                <form onSubmit={submitUser}>
 
 
-                    <div className="col-12">
+                    <div className="col-12 mb-3">
                         <div>
-                            <input id='first_name' type="text" placeholder='Name' onChange={getUser} />
+                            <input className='form-control' id='first_name' type="text" placeholder='Name' onChange={getUser} />
                         </div>
                     </div>
-                    <div className="col-12">
+                    <div className="col-12 mb-3">
                         <div>
-                            <input id='email' type="email" placeholder='E-mail'  onChange={getUser}/>
+                            <input className='form-control' id='email' type="email" placeholder='E-mail'  onChange={getUser}/>
                         </div>
                     </div>
-                    <div className="col-12">
+                    <div className="col-12 mb-4">
                         <div>
-                            <input id='password' type="password" placeholder='Password'  onChange={getUser}/>
+                            <input className='form-control' id='password' type="password" placeholder='Password'  onChange={getUser}/>
                         </div>
                     </div>
-                    <div className="col-12">
+                    <div className="col-12 d-flex justify-content-center">
                         <div>
-                            <button className='btn btn-primary' type='submit'>{action}</button>
+                            <button className='btn btn-outline-secondary' type='submit'>{action}</button>
                         </div>
                     </div>
 
